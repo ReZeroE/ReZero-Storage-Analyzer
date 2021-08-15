@@ -10,7 +10,7 @@ from datetime import datetime
 
 class ReZAnalyzer:
     def __init__(self):
-        self.master_dir = 'D:\\'
+        self.master_dir = 'C:\\'
         self.log_file = 'log.tsv'
         self.date = datetime.today().strftime('%Y-%m-%d')
 
@@ -19,6 +19,7 @@ class ReZAnalyzer:
     def record_size(self, dir_path: str, curr_dir: str):
         dir_list = os.listdir(self.master_dir)
         print(dir_list)
+
 
     def iterate_dir(self, curr_dir: str, dir_layer: int):
         if dir_layer == 1:
@@ -97,7 +98,8 @@ class ReZCompare:
         self.compare_file_data = {}
         self.compare_file_name = sys.argv[1]
 
-        self.compare_result_file = 'results2.tsv'
+        self.compare_result_file = 'results.tsv'
+
 
     def read_logs(self, compare_layer=-1, compare_name=''):
 
@@ -134,15 +136,36 @@ class ReZCompare:
         for curr_file_key in self.curr_file_data:
             if self.compare_file_data.__contains__(curr_file_key):
                 size_diff = int(self.curr_file_data[curr_file_key]) - int(self.compare_file_data[curr_file_key])
-                compare_results.append(f'Folder {curr_file_key} has a size change of {size_diff} bytes.')
+                if size_diff > 0:
+                    compare_results.append(f'+ Folder {curr_file_key} has a size change of {round(size_diff/1000000, 2)} MB. ({size_diff} bytes)')
+                elif size_diff < 0:
+                    compare_results.append(f'- Folder {curr_file_key} has a size change of {round(size_diff/1000000, 2)} MB. ({size_diff} bytes)')
+                else:
+                    compare_results.append(f'= Folder {curr_file_key} has a size change of {round(size_diff/1000000, 2)} MB. ({size_diff} bytes)')
             else:
-                compare_results.append(f'Folder with size {self.curr_file_data[curr_file_key]} has been created.')
-
+                compare_results.append(f'Folder {curr_file_key} with size {self.curr_file_data[curr_file_key]} has been created.')
 
 
         with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), self.compare_result_file), 'w', encoding='utf-8') as file_ptr:
+            compare_results.sort()
+
+            increase_label = 0
+            decrease_label = 0
+            unchange_label = 0
+
             for line in compare_results:
-                print(line)
+                # print(line)
+
+                if line.startswith('+') and increase_label == 0:
+                    file_ptr.write(f'\n=======================\ FILES THAT INCREASED IN SIZE /=======================\n')
+                    increase_label += 1
+                elif line.startswith('-') and decrease_label == 0:
+                    file_ptr.write(f'\n=======================\ FILES THAT DECREASED IN SIZE /=======================\n')
+                    decrease_label += 1
+                elif line.startswith('=') and unchange_label == 0:
+                    file_ptr.write(f'\n=====================\ FILES THAT DID NOT CHANGE IN SIZE /=====================\n')
+                    unchange_label += 1
+
                 file_ptr.write(f'{line}\n')
 
 
@@ -163,12 +186,16 @@ if __name__ == '__main__':
     #     pass
 
 
-    # analyzer = ReZAnalyzer()
-    # analyzer.ReZ_analyzer_driver()
+    if len(sys.argv) > 1:
+        # analyzer = ReZAnalyzer()
+        # analyzer.ReZ_analyzer_driver()
 
-    comparator = ReZCompare()
-    comparator.read_logs(compare_layer=0)
-    comparator.compare_logs()
+        comparator = ReZCompare()
+        comparator.read_logs(compare_layer=3)
+        comparator.compare_logs()
+    else:
+        analyzer = ReZAnalyzer()
+        analyzer.ReZ_analyzer_driver()
 
 
     print(f"Total Time Spent: [{time.time() - start_time} seconds]")
